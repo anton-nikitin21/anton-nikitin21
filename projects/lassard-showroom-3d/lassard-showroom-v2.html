@@ -1,0 +1,224 @@
+<div id="lassard-v2">
+  <h3>ЛАССАРД · интерьер и оборудование</h3>
+  <div class="viz-controls" aria-label="Ракурс">
+    <button type="button" class="btn" data-view="overview" aria-pressed="true">Общий вид</button>
+    <button type="button" class="btn" data-view="top" aria-pressed="false">План</button>
+    <button type="button" class="btn" data-view="interior" aria-pressed="false">Изнутри</button>
+    <button type="button" class="btn" data-action="tour">Пройти маршрут</button>
+  </div>
+  <div class="ls-stage"><canvas aria-label="3D-интерьер шоурума: экспозиция, сборочный пост, лазерная установка, контроль образцов и переговорная"></canvas><div class="ls-markers" aria-hidden="true"></div></div>
+  <div class="viz-controls">
+    <button class="btn btn-ghost" type="button" data-action="left" aria-label="Повернуть влево">↶</button>
+    <button class="btn btn-ghost" type="button" data-action="right" aria-label="Повернуть вправо">↷</button>
+    <button class="btn btn-ghost" type="button" data-action="in" aria-label="Приблизить">＋</button>
+    <button class="btn btn-ghost" type="button" data-action="out" aria-label="Отдалить">−</button>
+    <label class="form-check"><input class="form-check-input" id="lv-route" type="checkbox" checked><span class="form-check-label">Маршрут</span></label>
+    <label class="form-check"><input class="form-check-input" id="lv-evening" type="checkbox"><span class="form-check-label">Вечерний свет</span></label>
+  </div>
+  <div class="viz-controls"><label class="form-label">Рассмотреть зону<select id="lv-zone" class="form-select"><option value="0">01 · Вход и ресепшен</option><option value="1">02 · История и технологии</option><option value="2">03 · Оптика и образцы</option><option value="3">04 · Лазерное оборудование</option><option value="4">05 · Испытание образца</option><option value="5">06 · Переговорная</option></select></label><button class="btn" data-action="next" type="button">Следующая зона →</button></div>
+  <div id="lv-detail" class="text-small" aria-live="polite"></div>
+  <div class="viz-controls"><label class="form-label">Инженерная схема<select id="lv-system" class="form-select"><option value="none">Интерьер</option><option value="fire">Эвакуация и пожарная защита</option><option value="power">Электрика и связь</option><option value="air">Вентиляция и местная вытяжка</option><option value="service">Обслуживание оборудования</option></select></label></div>
+  <div id="lv-system-note" class="text-small" aria-live="polite"></div>
+  <div class="text-small ls-caption">Концепт · 18 × 12 м · станки без привязки к серийным моделям</div>
+</div>
+<style>
+#lassard-v2 .ls-stage{position:relative;width:100%;height:500px;touch-action:none;overflow:hidden}
+#lassard-v2 canvas{width:100%;height:100%;display:block;cursor:grab}
+#lassard-v2 canvas:active{cursor:grabbing}
+#lassard-v2 .ls-markers{position:absolute;inset:0;pointer-events:none}
+#lassard-v2 .ls-marker{position:absolute;transform:translate(-50%,-50%);background:var(--background);color:var(--foreground);border:1px solid var(--border);border-radius:50%;width:26px;height:26px;display:grid;place-items:center;font-weight:500}
+#lassard-v2 .ls-marker.selected{background:var(--primary);color:var(--primary-foreground)}
+#lassard-v2 .ls-caption{margin-top:10px;color:var(--muted-foreground)}
+@media(max-width:500px){#lassard-v2 .ls-stage{height:360px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>
+(()=>{
+const root=document.getElementById('lassard-v2'),stage=root.querySelector('.ls-stage'),canvas=root.querySelector('canvas'),detail=root.querySelector('#lv-detail');
+if(!window.THREE){detail.textContent='Не удалось загрузить 3D-просмотр. Проверьте доступ к сети.';return;}
+const T=THREE,scene=new T.Scene(),camera=new T.PerspectiveCamera(42,1,.08,160);let renderer;
+try{renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:true});}catch(e){detail.textContent='Для просмотра требуется поддержка WebGL.';return;}
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputEncoding=T.sRGBEncoding;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
+const hemi=new T.HemisphereLight(0xf1f6ff,0x39404a,.72);scene.add(hemi);
+const sun=new T.DirectionalLight(0xffebd5,2.1);sun.position.set(-3,15,10);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-15,right:15,top:13,bottom:-13,near:.5,far:45});sun.shadow.normalBias=.035;scene.add(sun);
+const fill=new T.DirectionalLight(0xb8d9ef,.6);fill.position.set(10,5,-2);scene.add(fill);
+const interiorLights=[];for(const [x,z] of [[-6,0],[0,-3],[6,-3],[6,3]]){const l=new T.PointLight(0xffe0b6,.45,10,2);l.position.set(x,3.0,z);scene.add(l);interiorLights.push(l);}
+const model=new T.Group();model.name='LASSARD_Showroom_Concept_v2';model.userData={units:'meters',dimensions:'18 x 12 m',status:'Concept only; assumed dimensions; schematic equipment'};scene.add(model);
+function group(name,parent=model){const g=new T.Group();g.name=name;parent.add(g);return g;}
+const shell=group('Architecture'),exhibits=group('Optics_and_samples'),machines=group('Equipment'),meeting=group('Meeting_room'),furniture=group('Reception'),lights=group('Lighting'),route=group('Visitor_route');
+function material(color,roughness=.6,metalness=0){return new T.MeshStandardMaterial({color,roughness,metalness});}
+const M={stone:material(0xc7c2b7,.9),wall:material(0xe6e2d9),charcoal:material(0x202b30,.55,.18),steel:material(0x8e9a9d,.28,.7),black:material(0x101a20,.5,.1),white:material(0xe4e8e4,.35,.12),wood:material(0x926640,.72),blue:material(0x187d94,.38,.25),rubber:material(0x171c21,.95),fabric:material(0x737f78,.98),paper:material(0xe2d8bd,.9),leaf:material(0x355d35,.8),soil:material(0x3a3027),amber:material(0xc67d32,.3,.4),screen:new T.MeshBasicMaterial({color:0x163f52}),led:new T.MeshStandardMaterial({color:0xffe7be,emissive:0xffd896,emissiveIntensity:1.8}),glass:new T.MeshPhysicalMaterial({color:0xcde8e7,transparent:true,opacity:.12,roughness:.1,metalness:.1,depthWrite:false,side:T.DoubleSide}),window:new T.MeshPhysicalMaterial({color:0xcfa86b,transparent:true,opacity:.25,roughness:.14,metalness:.12,depthWrite:false,side:T.DoubleSide})};
+// Procedural architectural material maps; no external imagery.
+function texture(kind){const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');let seed=47;function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
+ctx.fillStyle=kind==='wood'?'#af8359':'#b8b5ae';ctx.fillRect(0,0,256,256);for(let i=0;i<4500;i++){const n=rand();ctx.fillStyle='rgba('+(n>.5?'255,255,255':'30,24,15')+','+(kind==='wood'?.075:.05)+')';const x=rand()*256,y=rand()*256;ctx.fillRect(x,y,kind==='wood'?1:2,kind==='wood'?rand()*110:2);}const map=new T.CanvasTexture(c);map.wrapS=map.wrapT=T.RepeatWrapping;map.repeat.set(kind==='wood'?3:5,kind==='wood'?1:4);map.encoding=T.sRGBEncoding;return map;}
+M.wood.map=texture('wood');M.stone.map=texture('stone');
+function mesh(geo,mat,x,y,z,parent=model,name=''){const o=new T.Mesh(geo,mat);o.position.set(x,y,z);o.castShadow=!mat.transparent;o.receiveShadow=!mat.transparent;o.name=name;parent.add(o);return o;}
+function box(x,y,z,w,h,d,mat,parent=model,name=''){return mesh(new T.BoxGeometry(w,h,d),mat,x,y,z,parent,name);}
+function round(x,y,z,w,h,d,r,mat,parent=model,name=''){r=Math.min(r,w/3,h/3,d/3);const shape=new T.Shape();shape.moveTo(-w/2+r,-h/2+r);shape.lineTo(w/2-r,-h/2+r);shape.lineTo(w/2-r,h/2-r);shape.lineTo(-w/2+r,h/2-r);shape.closePath();const geo=new T.ExtrudeGeometry(shape,{depth:d-2*r,bevelEnabled:true,bevelSegments:3,steps:1,bevelSize:r,bevelThickness:r,curveSegments:1});geo.center();return mesh(geo,mat,x,y,z,parent,name);}
+function cyl(x,y,z,r,h,mat,parent=model,rTop=r){return mesh(new T.CylinderGeometry(rTop,r,h,24),mat,x,y,z,parent);}
+function sphere(x,y,z,r,mat,parent=model,sx=1,sy=1,sz=1){const o=mesh(new T.SphereGeometry(r,16,12),mat,x,y,z,parent);o.scale.set(sx,sy,sz);return o;}
+function rod(a,b,r,mat,parent=model){const p=new T.Vector3(...a),q=new T.Vector3(...b);const o=cyl(0,0,0,r,p.distanceTo(q),mat,parent);o.position.copy(p).add(q).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),q.sub(p).normalize());return o;}
+function text(str,x,y,z,w,h,fg='#e6ece8',bg='#1e2b30',parent=model){const c=document.createElement('canvas');c.width=1024;c.height=Math.max(64,Math.round(1024*h/w));const ctx=c.getContext('2d');if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);}ctx.fillStyle=fg;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='500 '+Math.round(c.height*.55)+'px Arial';ctx.fillText(str,512,c.height*.52,990);const tex=new T.CanvasTexture(c);tex.encoding=T.sRGBEncoding;return mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:tex,transparent:!bg,side:T.DoubleSide}),x,y,z,parent);}
+function panelScreen(x,y,z,w,h,parent=model){round(x,y,z,w,h,.07,.02,M.black,parent);const c=document.createElement('canvas');c.width=512;c.height=320;const ctx=c.getContext('2d');ctx.fillStyle='#142c38';ctx.fillRect(0,0,512,320);ctx.fillStyle='#2fa6ae';ctx.fillRect(24,25,220,12);ctx.fillStyle='#d6e6e5';ctx.font='22px Arial';ctx.fillText('LASSARD / PROCESS',24,72);for(let i=0;i<4;i++){ctx.fillStyle='#284957';ctx.fillRect(24,100+i*43,270,24);ctx.fillStyle='#6ab7b3';ctx.fillRect(24,100+i*43,90+i*35,24);}ctx.strokeStyle='#68bdb7';ctx.lineWidth=3;ctx.strokeRect(329,98,145,165);ctx.beginPath();ctx.arc(401,176,49,0,Math.PI*2);ctx.stroke();const tex=new T.CanvasTexture(c);tex.encoding=T.sRGBEncoding;mesh(new T.PlaneGeometry(w*.88,h*.83),new T.MeshBasicMaterial({map:tex}),x,y,z+.041,parent);}
+// Open architectural section. The front and right walls are cut away.
+round(0,-.2,0,18.1,.4,12.1,.06,M.stone,shell,'Floor_18x12m');round(0,-.43,0,18.3,.12,12.3,.025,M.charcoal,shell);
+box(0,1.7,-6,18,.16+3.24,.16,M.wall,shell);box(-9,1.7,0,.16,3.4,12,M.wall,shell);
+for(let x=-8;x<9;x+=1.5)box(x,.008,0,.012,.01,11.95,M.steel,shell);
+for(let z=-4.5;z<6;z+=1.5)box(0,.008,z,17.95,.01,.012,M.steel,shell);
+box(1.9,.023,-3.65,13.95,.035,4.5,M.charcoal,shell);
+box(0,.1,-5.89,17.9,.2,.04,M.charcoal,shell);box(-8.89,.1,0,.04,.2,11.9,M.charcoal,shell);
+// Wood slat wall, recessed display and history panels.
+box(-6.85,1.7,-5.87,4.0,3.25,.12,M.charcoal,shell);
+for(let x=-8.75;x<-4.95;x+=.17)box(x,1.7,-5.77,.065,3.2,.13,M.wood,shell);
+text('ЛАССАРД',-6.85,2.38,-5.65,3.3,.62,'#f6e7c9','#202b30',shell);
+text('ЛАЗЕРНЫЕ ТЕХНОЛОГИИ',-6.85,1.95,-5.65,3.2,.22,'#e1dbd0','#202b30',shell);
+for(let i=0;i<3;i++){const z=1.3-i*1.6;box(-8.87,1.75,z,.08,1.5,1.22,M.charcoal,shell);const title=text(['ИСТОРИЯ','КОМПЕТЕНЦИИ','ПРИМЕНЕНИЕ'][i],-8.805,2.22,z,1.12,.22,'#f5e5c5','#202b30',shell);title.rotation.y=Math.PI/2;for(let j=0;j<5;j++)box(-8.8,1.9-j*.15,z,.02,.045,.8-j*.09,M.steel,shell);box(-8.79,1.17,z,.03,.055,.84,M.blue,shell);}
+// Glazed separation with an actual service-door opening at the right.
+function glassBay(x1,x2,z,parent=shell){box((x1+x2)/2,1.47,z,x2-x1-.05,2.84,.024,M.glass,parent);for(const x of [x1,x2])box(x,1.47,z,.045,2.9,.045,M.charcoal,parent);box((x1+x2)/2,2.94,z,x2-x1,.045,.05,M.charcoal,parent);box((x1+x2)/2,.12,z,x2-x1,.08,.07,M.charcoal,parent);}
+for(let i=0;i<5;i++)glassBay(-4.75+i*2.22,-4.75+(i+1)*2.22,-1.35);
+glassBay(7.55,8.9,-1.35);box(6.95,2.96,-1.35,1.2,.12,.09,M.charcoal,shell);
+const door=group('Staff_door',shell);door.position.set(7.55,0,-1.35);door.rotation.y=-.55;box(-.57,1.45,0,1.14,2.8,.025,M.glass,door);for(let x of [-1.14,0])box(x,1.45,0,.035,2.84,.035,M.charcoal,door);rod([-.95,1,0.07],[-.95,1.34,.07],.015,M.steel,door);
+text('ДЕМОНСТРАЦИЯ • В СОПРОВОЖДЕНИИ',1,2.55,-1.315,5.7,.27,'#d2e6e5','#263940',shell);
+// Reception with fluted timber face and recessed toe-kick.
+round(-6.3,.54,3.55,2.8,1.05,.92,.09,M.white,furniture,'Reception_desk');box(-6.3,.12,3.6,2.6,.22,.7,M.charcoal,furniture);
+for(let x=-7.57;x<-5.03;x+=.105)box(x,.56,4.025,.05,.71,.025,M.wood,furniture);
+round(-6.3,1.1,3.55,2.94,.1,1.06,.04,M.stone,furniture);text('ЛАССАРД',-6.3,.64,4.047,1.58,.27,'#203139','#cfb99b',furniture);
+panelScreen(-5.6,1.4,3.5,.54,.36,furniture);rod([-5.6,1.1,3.49],[-5.6,1.25,3.49],.025,M.steel,furniture);box(-5.6,1.16,3.7,.45,.025,.16,M.black,furniture);
+box(-6.8,1.18,3.65,.42,.035,.29,M.paper,furniture);
+// Entrance threshold with two glass sidelights; central passage remains clear.
+box(-3.8,.035,5.2,2.0,.035,1.5,M.rubber,shell);for(let x of [-5.25,-2.35]){box(x,1.2,5.92,.05,2.4,.05,M.charcoal,shell);box(x+(x<-4?-.55:.55),1.2,5.92,1.05,2.34,.018,M.glass,shell);}const entry=text('ВХОД',-3.8,.06,5.45,1.2,.32,'#ded9cf','#1e2b30',shell);entry.rotation.x=-Math.PI/2;
+// Glass display cases with optics, mounts and cylindrical laser modules.
+for(const z of [-3.05,-.15]){const g=group('Optical_display',exhibits);g.position.set(-6.15,0,z);round(0,.46,0,1.6,.91,1.14,.04,M.white,g);box(0,.12,0,1.43,.15,.98,M.charcoal,g);box(0,.94,0,1.65,.07,1.18,M.charcoal,g);box(0,.985,0,1.48,.015,1.02,M.led,g);for(let x of [-.78,.78])box(x,1.24,0,.018,.53,1.1,M.glass,g);for(let zz of [-.55,.55])box(0,1.24,zz,1.57,.53,.018,M.glass,g);box(0,1.51,0,1.6,.018,1.13,M.glass,g);
+for(let i=0;i<3;i++){const xx=-.47+i*.47;box(xx,1.04,0,.29,.08,.3,M.black,g);const rim=mesh(new T.TorusGeometry(.135,.034,10,32),M.steel,xx,1.23,0,g);const lens=cyl(xx,1.23,.003,.115,.023,M.blue,g);lens.rotation.x=Math.PI/2;rod([xx,1.07,0],[xx,1.13,0],.024,M.steel,g);}
+text('ОПТИКА И КОМПОНЕНТЫ',0,.64,.578,1.43,.18,'#dce7e5','#203239',g);}
+// Assembly workbench, optical breadboard and optical path components.
+const assembly=group('Assembly_station',machines);assembly.position.set(-2.8,0,-3.8);
+for(let x of [-1.0,1.0])for(let z of [-.55,.55])box(x,.45,z,.07,.9,.07,M.steel,assembly);
+box(0,.92,0,2.3,.12,1.45,M.steel,assembly);box(0,.65,-.1,1.9,.25,1.0,M.white,assembly);box(0,1.01,0,1.95,.07,1.05,M.black,assembly);
+for(let x=-.8;x<.9;x+=.16)for(let z=-.38;z<.4;z+=.16)cyl(x,1.05,z,.012,.01,M.steel,assembly);
+for(let x of [-.66,-.14,.44]){box(x,1.17,0,.24,.22,.22,M.steel,assembly);const o=cyl(x,1.34,0,.105,.17,M.black,assembly);o.rotation.x=Math.PI/2;}
+box(.7,1.25,.08,.48,.4,.55,M.white,assembly);for(let x of [-1.05,1.05])box(x,1.84,-.61,.05,1.78,.05,M.charcoal,assembly);box(0,2.7,-.61,2.15,.08,.5,M.charcoal,assembly);box(0,2.64,-.45,1.85,.025,.2,M.led,assembly);
+panelScreen(.48,2.01,-.56,.87,.56,assembly);text('01 / СБОРКА',-2.8,2.8,-5.88,2.5,.32,'#c6d6d8','#253038',machines);
+// Laser cell with visible bed, gantry, enclosure, control panel and extraction.
+const laser=group('Enclosed_laser_cell',machines);laser.position.set(.65,0,-3.8);
+round(0,.48,0,2.75,.92,1.94,.065,M.white,laser);box(0,.12,0,2.58,.22,1.75,M.charcoal,laser);
+for(let x of [-1.1,1.1])for(let z of [-.72,.72])cyl(x,.12,z,.09,.2,M.rubber,laser);
+box(0,1.48,-.91,2.75,1.15,.12,M.white,laser);for(let x of [-1.31,1.31])box(x,1.48,0,.13,1.15,1.94,M.white,laser);round(0,2.05,0,2.8,.15,1.98,.04,M.white,laser);
+box(0,1.07,0,2.46,.1,1.62,M.black,laser);for(let x=-1.05;x<1.1;x+=.115)box(x,1.15,0,.035,.07,1.35,M.steel,laser);
+for(let x of [-1.05,1.05])rod([x,1.53,-.65],[x,1.53,.65],.035,M.steel,laser);box(0,1.64,-.12,2.2,.18,.22,M.blue,laser);round(.23,1.48,-.12,.32,.32,.3,.025,M.white,laser);cyl(.23,1.27,-.12,.045,.19,M.steel,laser,.085);box(.23,1.2,-.12,.7,.025,.45,M.steel,laser);
+for(let x of [-1.22,0,1.22])box(x,1.56,1.0,.055,1.0,.06,M.charcoal,laser);box(0,1.08,1,2.5,.07,.06,M.charcoal,laser);box(0,2.03,1,2.5,.07,.06,M.charcoal,laser);
+for(let x of [-.61,.61])box(x,1.56,1.007,1.16,.89,.018,M.window,laser);for(let x of [-.10,.10])rod([x,1.4,1.06],[x,1.67,1.06],.019,M.steel,laser);
+box(0,.56,.982,2.49,.015,.01,M.steel,laser);for(let x of [-.82,.82])box(x,.68,.995,.22,.03,.025,M.steel,laser);
+for(let z=-.55;z<.7;z+=.1)box(1.385,.49,z,.012,.15,.03,M.black,laser);
+rod([1.35,.85,.6],[1.8,1.3,.6],.04,M.steel,laser);panelScreen(1.8,1.55,.66,.6,.54,laser);const stop=cyl(1.97,1.27,.72,.043,.03,material(0xaa3f30),laser);stop.rotation.x=Math.PI/2;
+rod([1.08,2.13,-.7],[1.08,2.45,-.7],.025,M.steel,laser);for(let i=0;i<3;i++)cyl(1.08,2.39+i*.075,-.7,.048,.065,i===2?M.blue:M.amber,laser);
+round(-.3,.65,-1.48,.85,1.25,.58,.045,M.charcoal,laser);rod([0,.8,-.95],[0,.8,-1.35],.13,M.steel,laser);rod([-.3,1.28,-1.48],[-.3,2.3,-1.48],.10,M.steel,laser);text('02 / ЛАЗЕРНАЯ ОБРАБОТКА',.65,2.8,-5.88,3.8,.32,'#c6d6d8','#253038',machines);
+text('ЛАССАРД',-.75,.8,1.003,.75,.16,'#30454b','#e0e5df',laser);
+// Inspection station with gantry, probe and sample tray.
+const inspection=group('Sample_inspection',machines);inspection.position.set(4.1,0,-3.75);round(0,.45,0,1.65,.86,1.4,.04,M.white,inspection);box(0,.92,0,1.8,.11,1.5,M.black,inspection);
+for(let x of [-.6,.6])box(x,1.45,-.32,.14,1.02,.14,M.steel,inspection);box(0,1.97,-.32,1.35,.16,.22,M.white,inspection);box(.15,1.67,-.32,.2,.45,.2,M.blue,inspection);cyl(.15,1.37,-.32,.025,.18,M.steel,inspection);cyl(0,1.02,0,.29,.1,M.steel,inspection);panelScreen(1.1,1.38,.1,.62,.43,inspection);rod([1.1,.06,.1],[1.1,1.15,.1],.04,M.steel,inspection);text('03 / КОНТРОЛЬ',4.1,2.8,-5.88,2.6,.32,'#c6d6d8','#253038',machines);
+// Customer sample counter stays on the visitor side of the glass.
+round(7.6,.52,.25,1.9,1.02,1.0,.045,M.white,exhibits);box(7.6,1.065,.25,2.0,.08,1.12,M.stone,exhibits);for(let i=0;i<3;i++){box(7.1+i*.48,1.13,.25,.34,.045,.45,M.steel,exhibits);cyl(7.1+i*.48,1.18,.25,.095,.065,i%2?M.amber:M.blue,exhibits);}text('ВАШ ОБРАЗЕЦ',7.6,.64,.759,1.65,.23,'#e6dfd2','#20333b',exhibits);
+round(7.2,.5,-4.4,2.5,1,1.1,.045,M.white,machines);box(7.2,1.04,-4.4,2.6,.08,1.18,M.steel,machines);panelScreen(7.5,1.48,-4.6,.7,.48,machines);for(let x of [6.3,7.15,8]){box(x,.5,-3.839,.025,.8,.014,M.steel,machines);box(x+.26,.66,-3.83,.25,.035,.025,M.charcoal,machines);}text('ЛАБОРАТОРИЯ ОБРАЗЦОВ',7.0,2.7,-5.88,3.6,.32,'#c6d6d8','#253038',machines);
+// Central sample gallery with curved-edge top and lit reveals.
+round(-.95,.08,1.82,4.0,.12,2.0,.04,M.charcoal,exhibits);round(-.95,.48,1.82,3.3,.85,1.15,.09,M.wood,exhibits);box(-.95,.92,1.82,3.28,.025,1.15,M.led,exhibits);round(-.95,.99,1.82,3.55,.11,1.35,.04,M.stone,exhibits);
+for(let i=0;i<4;i++){const x=-2.17+i*.81;box(x,1.06,1.82,.58,.025,.66,M.charcoal,exhibits);if(i===0){const r=mesh(new T.TorusGeometry(.17,.06,12,32),M.steel,x,1.22,1.82,exhibits);r.rotation.x=Math.PI/2;}if(i===1){for(let k=0;k<3;k++)box(x,1.11+k*.035,1.82,.4-k*.05,.025,.4-k*.05,M.amber,exhibits);}if(i===2){cyl(x,1.21,1.82,.16,.28,M.steel,exhibits);for(let a=0;a<6;a++){const an=a*Math.PI/3;box(x+Math.cos(an)*.13,1.22,1.82+Math.sin(an)*.13,.055,.3,.055,M.black,exhibits);}}if(i===3){const p=box(x,1.28,1.82,.4,.38,.08,M.blue,exhibits);p.rotation.y=-.35;}}
+text('МАТЕРИАЛ  /  ПРОЦЕСС  /  РЕЗУЛЬТАТ',-.95,.55,2.406,2.9,.22,'#ead9be','#563e2c',exhibits);
+round(2.0,.68,1.7,.38,1.3,.32,.04,M.charcoal,exhibits);panelScreen(2.0,1.48,1.7,.74,.54,exhibits);round(2,.07,1.7,.7,.1,.6,.025,M.charcoal,exhibits);
+// Meeting room: timber floor, glass return, upholstered chairs and display.
+box(6.2,.03,3.4,4.65,.035,4.25,M.wood,meeting);for(let z=1.35;z<5.5;z+=.21)box(6.2,.052,z,4.62,.008,.009,M.charcoal,meeting);
+glassBay(4.0,6.3,1.2,meeting);glassBay(6.3,8.55,1.2,meeting);box(8.6,1.4,3.36,.025,2.76,4.35,M.glass,meeting);for(let z of [1.2,5.5])box(8.6,1.4,z,.05,2.8,.05,M.charcoal,meeting);
+// Entrance to meeting area is open along its left edge.
+round(6.15,.8,3.15,2.35,.12,1.15,.09,M.wood,meeting);for(let x of [5.35,6.95])box(x,.4,3.15,.12,.74,.65,M.charcoal,meeting);
+function chair(x,z,angle,parent){const g=group('Upholstered_chair',parent);g.position.set(x,0,z);g.rotation.y=angle;round(0,.47,0,.61,.13,.58,.06,M.fabric,g);round(0,.81,.25,.6,.59,.12,.055,M.fabric,g);for(let xx of [-.23,.23])for(let zz of [-.19,.19])rod([xx,.42,zz],[xx*1.2,.04,zz*1.3],.018,M.charcoal,g);}
+for(let x of [5.45,6.85]){chair(x,2.12,Math.PI,meeting);chair(x,4.2,0,meeting);}for(let x of [5.45,6.85]){box(x,.89,3.2,.43,.022,.3,M.charcoal,meeting);box(x,.91,3.2,.4,.008,.28,M.paper,meeting);cyl(x+.25,.93,2.9,.055,.13,M.white,meeting);}
+round(8.38,1.45,3.5,.1,1.2,2.15,.03,M.black,meeting);const media=text('ВАШЕ РЕШЕНИЕ',8.313,1.45,3.5,1.9,.65,'#a1ced0','#16303b',meeting);media.rotation.y=-Math.PI/2;
+// Low waiting bench and side table.
+round(-.65,.34,4.8,2.9,.5,.76,.13,M.fabric,furniture);round(-.65,.7,5.06,2.9,.6,.2,.07,M.fabric,furniture);for(let x of [-1.82,.52])box(x,.12,4.8,.06,.23,.5,M.charcoal,furniture);cyl(1.35,.46,4.78,.42,.065,M.stone,furniture);cyl(1.35,.25,4.78,.08,.4,M.charcoal,furniture);
+// Realistic plant silhouettes and scale figures.
+function plant(x,z,height=1.4){cyl(x,.23,z,.29,.46,M.stone,furniture,.24);cyl(x,.458,z,.23,.016,M.soil,furniture);for(let i=0;i<10;i++){let a=i*2.4,yy=.68+(i%4)*height*.2;rod([x,.35,z],[x+Math.sin(a)*.3,yy,z+Math.cos(a)*.3],.012,M.wood,furniture);const leaf=sphere(x+Math.sin(a)*.3,yy,z+Math.cos(a)*.3,.2,M.leaf,furniture,.55,1.4,.45);leaf.rotation.z=Math.sin(a)*.7;}}
+plant(-8.25,4.7);plant(8,5.2,1);plant(-8,-4.8,1);
+function person(x,z,rot){const g=group('Scale_figure',furniture);g.position.set(x,0,z);g.rotation.y=rot;const cloth=material(0x6c7474,.9);round(0,1.05,0,.38,.53,.22,.08,cloth,g);sphere(0,1.56,0,.115,M.wood,g,1,1.16,1);cyl(0,1.38,0,.055,.12,M.wood,g);for(let xx of [-.10,.10]){rod([xx,.8,0],[xx,.14,.035],.055,M.charcoal,g);round(xx,.08,.065,.13,.12,.26,.035,M.black,g);}for(let xx of [-.25,.25])rod([xx,1.23,0],[xx*1.04,.84,.05],.044,cloth,g);}
+person(-3.2,3.75,.4);person(.15,-.35,Math.PI);person(5.8,.1,Math.PI);
+// Wall-supported lighting rails; no floating ceiling slab in the section view.
+for(let x of [-7,-2.8,.65,4.1,7.2]){box(x,3.18,-5.72,.06,.06,.3,M.charcoal,lights);box(x,3.18,-3.38,.055,.055,4.5,M.charcoal,lights);for(let z of [-4.5,-2.5]){cyl(x,3.07,z,.075,.19,M.charcoal,lights);cyl(x,2.968,z,.056,.012,M.led,lights);}}
+for(const [x,z,len] of [[-6.2,3.5,2.8],[-.95,1.82,3.5],[6.15,3.15,2.4]]){round(x,3.05,z,len,.065,.16,.02,M.charcoal,lights);box(x,3.009,z,len-.1,.015,.12,M.led,lights);}
+// A continuous visitor path stays outside the operating equipment area.
+const path=[[-3.8,.065,5.85],[-3.8,.065,4.55],[-7.55,.065,4.55],[-7.55,.065,2.5],[-7.55,.065,-1.5],[-5.0,.065,-1.5],[-4.5,.065,-.2],[5.9,.065,-.2],[5.9,.065,.4],[3.3,.065,.4],[3.3,.065,3.25],[4.7,.065,3.25]];
+const routeMat=new T.MeshBasicMaterial({color:0x4aaba8});for(let i=1;i<path.length;i++)rod(path[i-1],path[i],.025,routeMat,route);for(let x=-3.7;x<5.6;x+=1.4){rod([x-.15,.07,-.35],[x,.07,-.2],.025,routeMat,route);rod([x,.07,-.2],[x-.15,.07,-.05],.025,routeMat,route);}
+// Engineering layers are coordination proposals, not certified design drawings.
+const engineering=group('Engineering_concept');const systems={fire:group('Fire_and_egress',engineering),power:group('Power_and_data',engineering),air:group('Ventilation',engineering),service:group('Maintenance_clearance',engineering)};
+const safety=group('Safety_equipment',model),fireRed=material(0xb93d32,.5),safeGreen=new T.MeshBasicMaterial({color:0x33986a}),powerOrange=new T.MeshBasicMaterial({color:0xe5a33a}),dataPurple=new T.MeshBasicMaterial({color:0x9171c1}),supplyBlue=new T.MeshBasicMaterial({color:0x48a8d1}),extractOrange=new T.MeshBasicMaterial({color:0xd37848});
+function pipe(points,r,mat,parent){for(let i=1;i<points.length;i++)rod(points[i-1],points[i],r,mat,parent);}
+function arrow(a,b,parent){pipe([a,b],.046,safeGreen,parent);const v=new T.Vector3(...b).sub(new T.Vector3(...a)).normalize();const tip=mesh(new T.ConeGeometry(.15,.34,16),safeGreen,...b,parent);tip.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v);}
+function floorLabel(str,x,z,w,fg,bg,parent){const o=text(str,x,.13,z,w,.36,fg,bg,parent);o.rotation.x=-Math.PI/2;return o;}
+// Two assumed exit connections. Final destinations and geometry require the building plan.
+for(const [x,z,name] of [[-3.8,5.94,'ВЫХОД A'],[8.9,-.2,'ВЫХОД B']]){const sign=text(name,x,2.4,z,1.1,.27,'#ffffff','#257a52',safety);if(x>8)sign.rotation.y=-Math.PI/2;floorLabel(name,x>8?8.15:x,z>5?5.35:z,1.25,'#ffffff','#257a52',systems.fire);}
+for(let z of [-.9,.5])box(8.94,1.2,z,.06,2.4,.06,M.charcoal,safety);box(8.94,2.42,-.2,.06,.06,1.46,M.charcoal,safety);
+// Proposed paths avoid exhibit islands and keep visitors outside the machine enclosure.
+pipe([[-7.55,.1,-3.9],[-7.55,.1,2.3],[-4.1,.1,2.3],[-3.8,.1,5.8]],.046,safeGreen,systems.fire);
+arrow([-3.8,.1,4.7],[-3.8,.1,5.8],systems.fire);
+pipe([[4.5,.1,3.2],[3.25,.1,3.2],[3.25,.1,-.65],[8.8,.1,-.65],[8.8,.1,-.2]],.046,safeGreen,systems.fire);
+arrow([7.65,.1,-.65],[8.8,.1,-.65],systems.fire);
+pipe([[-3.5,.1,-2.05],[6.95,.1,-2.05],[6.95,.1,-.65]],.046,safeGreen,systems.fire);
+arrow([6.95,.1,-1.8],[6.95,.1,-.7],systems.fire);
+for(const [x,z] of [[-5.45,5.35],[8.65,-1.0]]){cyl(x,.53,z,.1,.5,fireRed,safety);cyl(x,.83,z,.035,.1,M.black,safety);rod([x,.86,z],[x+.11,.86,z],.018,M.black,safety);box(x,.9,z,.32,1.55,.12,M.charcoal,safety);cyl(x,.6,z+.13,.095,.42,fireRed,safety);const sign=text('ОГНЕТУШИТЕЛЬ',x,1.63,z+.09,.65,.18,'#ffffff','#aa3029',safety);box(x+.3,1.35,z,.13,.13,.06,fireRed,safety);}
+for(const [x,z] of [[-6,2],[0,1],[5,3],[1,-3.5]]){cyl(x,3.2,z,.095,.055,M.white,systems.fire);sphere(x,3.155,z,.045,fireRed,systems.fire,1,.5,1);}
+for(const [x,z] of [[-3.8,4.8],[6.8,-.7]])box(x,2.7,z,.35,.08,.14,M.led,systems.fire);
+// Main panel, overhead cable tray and separately drawn data run.
+round(-4.25,1.15,-5.65,.66,1.4,.3,.035,M.white,systems.power);text('ЩР',-4.25,1.4,-5.487,.37,.26,'#172f36','#d6ded9',systems.power);box(-4.0,1.15,-5.475,.025,.18,.025,M.black,systems.power);
+pipe([[-4.25,1.7,-5.48],[-4.25,3.0,-5.48],[7.7,3,-5.48]],.055,powerOrange,systems.power);
+pipe([[-4.3,2.8,-5.2],[7.7,2.8,-5.2]],.025,dataPurple,systems.power);
+for(let x=-4.2;x<8;x+=.4)box(x,2.93,-5.48,.035,.035,.27,M.steel,systems.power);
+for(const [x,z] of [[-2.8,-3.8],[.65,-3.8],[4.1,-3.75],[7.2,-4.4]]){pipe([[x,3,-5.48],[x,3,z-.85],[x,.6,z-.85]],.035,powerOrange,systems.power);box(x,.65,z-.8,.18,.24,.1,M.charcoal,systems.power);pipe([[x,2.8,-5.2],[x+.13,2.8,z-.85],[x+.13,1.35,z-.85]],.018,dataPurple,systems.power);}
+pipe([[-4.25,3,-5.48],[-8.75,3,-5.48],[-8.75,3,3.4],[-8.75,.28,3.4],[-6.3,.28,3.4]],.035,powerOrange,systems.power);
+pipe([[7.7,3,-5.48],[8.7,3,-5.48],[8.7,3,3.5],[8.7,.3,3.5]],.035,powerOrange,systems.power);
+text('СИЛОВЫЕ ЛИНИИ',1.0,3.28,-5.42,2.6,.22,'#f3ce7e','#283137',systems.power);text('СВЯЗЬ',6.1,3.05,-5.1,1.0,.18,'#d4bbed','#283137',systems.power);
+// Supply and general exhaust are separate; process extraction has its own branch.
+pipe([[-8,3.65,1.0],[7.7,3.65,1.0]],.14,M.steel,systems.air);
+pipe([[-8,3.65,1.145],[7.7,3.65,1.145]],.045,supplyBlue,systems.air);
+for(let x of [-6,-1,5.5]){pipe([[x,3.65,1],[x,3.36,1]],.10,M.steel,systems.air);box(x,3.27,1,.65,.1,.65,M.white,systems.air);for(let z=.8;z<1.25;z+=.1)box(x,3.214,z,.48,.008,.024,M.black,systems.air);rod([x,3.18,1],[x,2.8,1],.035,supplyBlue,systems.air);}
+pipe([[-7.6,3.65,-4.8],[7.8,3.65,-4.8]],.13,M.steel,systems.air);pipe([[-7.6,3.65,-4.665],[7.8,3.65,-4.665]],.04,extractOrange,systems.air);
+for(let x of [-6.4,4.8]){pipe([[x,3.65,-4.8],[x,3.38,-4.8]],.09,M.steel,systems.air);box(x,3.28,-4.8,.52,.08,.52,M.charcoal,systems.air);}
+pipe([[.35,2.3,-5.28],[.35,3.3,-5.28],[1.8,3.3,-5.28],[1.8,4.1,-5.28]],.10,extractOrange,systems.air);
+round(1.8,3.5,-5.28,.62,.52,.5,.04,M.charcoal,systems.air);text('МЕСТНАЯ ВЫТЯЖКА',2.8,3.88,-5.15,2.6,.22,'#f2c4a7','#283137',systems.air);
+text('ПРИТОК',-3.5,3.9,1.0,1.5,.24,'#b6e9fc','#283137',systems.air);text('ОБЩАЯ ВЫТЯЖКА',5.4,3.9,-4.8,2.6,.24,'#f2c4a7','#283137',systems.air);
+// Clearance bands are deliberately labeled for equipment-specific verification.
+const areaMat=new T.MeshBasicMaterial({color:0xd7a54c,transparent:true,opacity:.22,depthWrite:false});
+box(1.2,.072,-2.1,11.8,.018,.9,areaMat,systems.service);box(1.0,.072,-5.45,11.2,.018,.6,areaMat,systems.service);
+floorLabel('ДОСТУП К ОБОРУДОВАНИЮ',1.0,-2.1,5.0,'#f2d399','#303536',systems.service);
+const systemNotes={none:'',fire:'Зелёный: предполагаемые пути к выходам A/B. Красный: пожарное оборудование. Выходы, извещатели и средства тушения требуют проверки по плану здания.',power:'Оранжевый: электропитание; фиолетовый: связь. Щит, отдельные линии станков и подвесные трассы — без подбора кабелей и защит до получения нагрузок.',air:'Голубой: приток; оранжевый: общая и отдельная технологическая вытяжка. Расходы, фильтрация, выброс и противопожарные решения подлежат расчёту.',service:'Жёлтый: резерв доступа для обслуживания. Проверить по паспортам станков; также уточнить шум, тепло, массу оборудования, доступность и лазерную защиту.'};
+let activeSystem='none';function showSystem(name){activeSystem=name;Object.entries(systems).forEach(([k,g])=>g.visible=k===name);root.querySelector('#lv-system').value=name;root.querySelector('#lv-system-note').textContent=systemNotes[name];route.visible=state.route&&name==='none';}
+// Six authored inspection viewpoints. Camera positions are expressed as orbit states.
+const zones=[
+ {p:[-6.3,1.65,3.55],target:[-6.15,1.0,3.45],yaw:.42,pitch:.32,d:5.9,txt:'01 · Вход и ресепшен — каменная столешница, деревянные рейки и место встречи гостя.'},
+ {p:[-8.25,2.5,.2],target:[-8.15,1.7,.15],yaw:1.22,pitch:.17,d:6.1,txt:'02 · История и технологии — три настенных модуля вдоль маршрута посетителя.'},
+ {p:[-6.15,1.95,-2.0],target:[-6.15,1,-1.7],yaw:.3,pitch:.43,d:7.8,txt:'03 · Оптика и образцы — витрины с линзами, оправами и подсветкой.'},
+ {p:[.65,2.55,-3.8],target:[.65,1.35,-3.4],yaw:.3,pitch:.24,d:7.8,txt:'04 · Лазерное оборудование — рабочая камера, координатный узел, пульт и вытяжной модуль.'},
+ {p:[7.6,1.55,.25],target:[6.9,1.12,-1.5],yaw:.48,pitch:.31,d:8.3,txt:'05 · Испытание образца — стойка передачи деталей, лабораторный стол и измерительный пост.'},
+ {p:[6.15,1.5,3.15],target:[6.2,1.05,3.3],yaw:-.68,pitch:.37,d:7.0,txt:'06 · Переговорная — четыре места, стеклянные перегородки, экран и деревянная отделка.'}
+];
+const markers=zones.map((z,i)=>{const el=document.createElement('span');el.className='ls-marker';el.textContent='0'+(i+1);root.querySelector('.ls-markers').append(el);return el;});
+let state={yaw:.52,pitch:.72,distance:28,target:[0,.6,0],selected:5,view:'overview',route:true,evening:false};let frameId=0;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function restore(s){if(!s||s.version!==2)return;for(const key of ['yaw','pitch','distance'])if(Number.isFinite(s[key]))state[key]=s[key];state.pitch=T.MathUtils.clamp(state.pitch,.05,1.56);state.distance=T.MathUtils.clamp(state.distance,3,44);if(Array.isArray(s.target)&&s.target.length===3&&s.target.every(Number.isFinite))state.target=s.target.slice();if(Number.isInteger(s.selected)&&s.selected>=0&&s.selected<6)state.selected=s.selected;if(['overview','top','interior','zone','free'].includes(s.view))state.view=s.view;state.route=s.route!==false;state.evening=s.evening===true;}
+restore(window.openai?.widgetState?.privateContent);
+function save(){window.openai?.setWidgetState?.({modelContent:{concept:'ЛАССАРД · детализированный интерьер 18 × 12 м',zone:zones[state.selected].txt,lighting:state.evening?'Вечерний':'Дневной'},privateContent:{version:2,...state}})?.catch(()=>{});}
+function lighting(){hemi.intensity=state.evening?.32:.72;sun.intensity=state.evening?.28:2.1;fill.intensity=state.evening?.3:.6;interiorLights.forEach(l=>l.intensity=state.evening?5:.45);M.led.emissiveIntensity=state.evening?3.4:1.8;renderer.toneMappingExposure=state.evening?1.35:1;}
+function ui(){root.querySelector('#lv-zone').value=state.selected;root.querySelector('#lv-route').checked=state.route;root.querySelector('#lv-evening').checked=state.evening;detail.textContent=zones[state.selected].txt;root.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===state.view)));showSystem(activeSystem);lighting();}
+function draw(){const factor=state.view==='overview'||state.view==='top'?Math.max(1,1.35/camera.aspect):Math.max(1,1.0/camera.aspect);const r=state.distance*factor,t=new T.Vector3(...state.target);camera.position.set(t.x+r*Math.sin(state.yaw)*Math.cos(state.pitch),t.y+r*Math.sin(state.pitch),t.z+r*Math.cos(state.yaw)*Math.cos(state.pitch));camera.lookAt(t);renderer.render(scene,camera);const w=stage.clientWidth,h=stage.clientHeight;zones.forEach((z,i)=>{const p=new T.Vector3(...z.p).project(camera);const visible=['overview','top'].includes(state.view)&&p.z<1&&p.x>-.95&&p.x<.95&&p.y>-.93&&p.y<.93;markers[i].hidden=!visible;markers[i].style.display=visible?'grid':'none';markers[i].style.left=(p.x*.5+.5)*w+'px';markers[i].style.top=(-p.y*.5+.5)*h+'px';markers[i].classList.toggle('selected',i===state.selected);});}
+function move(next,animate=true){cancelAnimationFrame(frameId);const from={...state,target:state.target.slice()};const to={...state,...next};state={...to,target:from.target};ui();const start=performance.now();function tick(now){const u=animate&&!reduced?Math.min(1,(now-start)/650):1;const e=u*u*(3-2*u);for(const k of ['yaw','pitch','distance'])state[k]=from[k]+(to[k]-from[k])*e;state.target=from.target.map((n,i)=>n+(to.target[i]-n)*e);draw();if(u<1)frameId=requestAnimationFrame(tick);else{state={...to,target:to.target.slice()};save();}}frameId=requestAnimationFrame(tick);}
+function zone(index){const z=zones[index];move({selected:index,view:'zone',target:z.target.slice(),yaw:z.yaw,pitch:z.pitch,distance:z.d});}
+root.querySelector('#lv-zone').onchange=e=>zone(Number(e.target.value));root.querySelector('#lv-route').onchange=e=>{state.route=e.target.checked;ui();draw();save();};root.querySelector('#lv-evening').onchange=e=>{state.evening=e.target.checked;ui();draw();save();};
+root.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{const view=b.dataset.view;if(view==='top')move({view,yaw:0,pitch:1.56,distance:27,target:[0,0,0]});else if(view==='interior')move({view,yaw:.10,pitch:.10,distance:12.0,target:[0,1.35,-3.6]});else move({view,yaw:.52,pitch:.72,distance:28,target:[0,.6,0]});});
+root.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{const a=b.dataset.action;if(a==='tour')return zone(0);if(a==='next')return zone((state.selected+1)%6);if(a==='left'||a==='right')move({view:'free',yaw:state.yaw+(a==='left'?-.25:.25)});if(a==='in'||a==='out')move({distance:T.MathUtils.clamp(state.distance*(a==='in'?.83:1.2),3,44)});});
+const pointers=new Map();let pinchDistance=0;canvas.onpointerdown=e=>{cancelAnimationFrame(frameId);canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2){const p=[...pointers.values()];pinchDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);}};
+canvas.onpointermove=e=>{const prev=pointers.get(e.pointerId);if(!prev)return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2){const p=[...pointers.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(pinchDistance>0)state.distance=T.MathUtils.clamp(state.distance*pinchDistance/Math.max(1,d),3,44);pinchDistance=d;}else{state.yaw-=(e.clientX-prev.x)*.006;state.pitch=T.MathUtils.clamp(state.pitch+(e.clientY-prev.y)*.005,.05,1.56);state.view='free';}ui();draw();};
+function release(e){pointers.delete(e.pointerId);pinchDistance=0;save();}canvas.onpointerup=release;canvas.onpointercancel=release;
+canvas.addEventListener('wheel',e=>{e.preventDefault();cancelAnimationFrame(frameId);state.distance=T.MathUtils.clamp(state.distance*Math.exp(e.deltaY*.001),3,44);draw();save();},{passive:false});
+new ResizeObserver(()=>{const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();draw();}).observe(stage);
+window.addEventListener('openai:set_globals',e=>{const saved=e.detail?.globals?.widgetState?.privateContent;if(saved?.version!==2)return;cancelAnimationFrame(frameId);restore(saved);ui();draw();});
+root.querySelector('#lv-system').onchange=e=>{showSystem(e.target.value);move({view:'overview',yaw:.52,pitch:.78,distance:27,target:[0,.9,0]});};
+window.lassardModel={scene,model,renderer,camera,route,systems,getState:()=>JSON.parse(JSON.stringify(state))};ui();draw();
+})();
+</script>
+

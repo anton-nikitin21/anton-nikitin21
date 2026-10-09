@@ -1,45 +1,40 @@
 ![Антон Никитин — портфолио](assets/portfolio-header.svg)
 
-## Привет, я Антон
+# Антон Никитин
 
-Развиваюсь в Python-разработке и анализе данных. В этом портфолио собраны учебные приложения, исследования и прототипы для хакатонов. Рассматриваю стажировки и позиции начинающего разработчика.
+Я разрабатываю приложения на Python и Django, работаю с базами данных и анализирую данные. Здесь я собрал свои проекты с исходным кодом, описаниями и инструкциями запуска. Ищу стажировку или позицию Junior-разработчика.
 
-**Направления:** Python · Django · pandas · scikit-learn · SQL · MongoDB · JavaScript.
+**Автор представленных работ: Антон Никитин.**
 
-## Избранные проекты
+## Мои основные проекты
 
-| Проект | Что показывает | Технологии |
+| Проект | Что я реализовал | Технологии |
 | --- | --- | --- |
-| [Student Burnout](https://github.com/anton-nikitin21/ai-student-burnout) | Подготовка данных, сравнение моделей, Django-интерфейс | Python, scikit-learn, Django |
-| [Taxi Service](https://github.com/anton-nikitin21/django-taxi) | Автомобили, водители, заказы, модели и шаблоны | Django, HTML |
+| [Student Burnout](https://github.com/anton-nikitin21/ai-student-burnout) | Подготовку данных, сравнение моделей и веб-интерфейс | Python, scikit-learn, Django |
+| [Taxi Service](https://github.com/anton-nikitin21/django-taxi) | Приложение с автомобилями, водителями и заказами | Django, HTML |
 | [Airport Traffic](https://github.com/anton-nikitin21/airport-traffic-analysis) | Исследование пассажиропотока и статистические сравнения | pandas, SciPy, Jupyter |
-| [Survey Anomalies](https://github.com/anton-nikitin21/survey-anomaly-detection) | Робастные статистики и обработка Parquet | pandas, NumPy, PyArrow |
-| [Wine Catalog Bot](https://github.com/anton-nikitin21/wine-catalog-bot) | Парсинг каталога, CSV, графики и Telegram-бот | requests, BeautifulSoup, Telegram |
-| [3D Showroom](https://github.com/anton-nikitin21/anton-nikitin21/tree/main/projects/lassard-showroom-3d) | Интерактивная модель интерьера и инженерные слои | HTML, JavaScript, 3D |
+| [Survey Anomalies](https://github.com/anton-nikitin21/survey-anomaly-detection) | Поиск аномалий и объяснение результатов | pandas, NumPy, PyArrow |
+| [Wine Catalog Bot](https://github.com/anton-nikitin21/wine-catalog-bot) | Парсер, экспорт данных, графики и Telegram-бота | requests, BeautifulSoup, Telegram |
+| [Trace](https://github.com/anton-nikitin21/anton-nikitin21/tree/main/projects/trace-fintech) | Прототип проверки комплектности документов и адресных уточнений | Финтех, правила проверки, веб-интерфейс |
+| [3D Showroom](https://github.com/anton-nikitin21/anton-nikitin21/tree/main/projects/lassard-showroom-3d) | Интерактивную модель интерьера с инженерными слоями | HTML, JavaScript, 3D |
 
-## Ещё в портфолио
+## Другие мои работы
 
-| Проект | Содержание |
+| Проект | Что я сделал |
 | --- | --- |
-| [Classifier Comparison](https://github.com/anton-nikitin21/ml-classifier-comparison) | Сравнение шести моделей классификации |
-| [GPS Anomalies](https://github.com/anton-nikitin21/gps-anomaly-detection) | Расстояния, скорости и визуализация выбросов |
-| [MongoDB CLI](https://github.com/anton-nikitin21/mongo-aggregation-cli) | Импорт JSON и aggregation pipeline |
-| [Telecom Database Tools](https://github.com/anton-nikitin21/telecom-database-tools) | Инструменты MongoDB и PostgreSQL |
-| [HTML Encoding Converter](https://github.com/anton-nikitin21/anton-nikitin21/tree/main/projects/html-encoding-converter) | Преобразование HTML в UTF-8 и резервные копии |
-| [Trace](https://github.com/anton-nikitin21/anton-nikitin21/tree/main/projects/trace-fintech) | Описание командного финтех-прототипа и ссылка на демо |
-| [Web Learning Projects](https://github.com/anton-nikitin21/anton-nikitin21/tree/main/projects/web-learning-projects) | Ранние HTML/CSS-страницы и JavaScript-игры |
-| [Python Learning Archive](https://github.com/anton-nikitin21/anton-nikitin21/tree/main/projects/python-learning-archive) | Упражнения, небольшие скрипты и первые Django-проекты |
+| [Classifier Comparison](https://github.com/anton-nikitin21/ml-classifier-comparison) | Сравнил шесть моделей классификации |
+| [GPS Anomalies](https://github.com/anton-nikitin21/gps-anomaly-detection) | Реализовал расчёт скорости, поиск выбросов и карты |
+| [MongoDB CLI](https://github.com/anton-nikitin21/mongo-aggregation-cli) | Реализовал импорт JSON и выполнение агрегаций |
+| [Telecom Database Tools](https://github.com/anton-nikitin21/telecom-database-tools) | Разработал инструменты MongoDB и PostgreSQL |
+| [HTML Encoding Converter](https://github.com/anton-nikitin21/anton-nikitin21/tree/main/projects/html-encoding-converter) | Реализовал преобразование HTML в UTF-8 |
+| [Canvas Game](https://github.com/anton-nikitin21/NA21) | Разработал браузерную JavaScript-игру |
 
-## Как посмотреть работу
+## Как посмотреть мои проекты
 
-В каждом проекте есть README с назначением, составом, зависимостями и ограничениями. Для проектов с данными указаны ожидаемые файлы: частные данные и реальные GPS-траектории не включены в новые публикации. Проекты учебные; достигнутые бизнес-результаты или непроверенные метрики не заявляются.
+В README каждого проекта я описал назначение, устройство и запуск. В исследованиях я указал необходимые входные данные. Пароли, локальные базы и частные данные я не включаю в публикации.
 
-Для 3D-шоурума доступны [HTML-модель](projects/lassard-showroom-3d/lassard-showroom-v2.html) и [GLB-файл](projects/lassard-showroom-3d/assets/lassard-showroom-engineering.glb). Инженерные схемы предварительные. Trace — командная работа; здесь представлены материалы проекта, его исходный код локально не найден.
+[Открыть демо Trace](https://osnovanie-super-bobry.bu-rchfieldadams12.chatgpt.site/) · [Посмотреть 3D-шоурум](https://github.com/anton-nikitin21/anton-nikitin21/tree/main/projects/lassard-showroom-3d).
 
-При подготовке части работ использовался ИИ. Документация указывает учебный статус, доступные проверки и границы применения.
+Исходную версию исследования с результатами я сохраняю в [polusem](https://github.com/anton-nikitin21/polusem).
 
-## Ранние репозитории
-
-[NA21 — Canvas-игра](https://github.com/anton-nikitin21/NA21) · [Python-практика](https://github.com/anton-nikitin21/python) · [polusem — исходная версия исследования](https://github.com/anton-nikitin21/polusem).
-
-Связаться со мной можно через мой [GitHub-профиль](https://github.com/anton-nikitin21).
+[Мой GitHub](https://github.com/anton-nikitin21)
